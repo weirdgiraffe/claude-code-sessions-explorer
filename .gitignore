@@ -1,0 +1,4 @@
+.env
+.envrc
+**/.claude/settings.local.json
+CLAUDE.*.md
