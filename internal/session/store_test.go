@@ -119,6 +119,54 @@ func TestList_FilterBySince(t *testing.T) {
 	assert.True(t, sessions[0].StartedAt.After(cutoff) || sessions[0].StartedAt.Equal(cutoff))
 }
 
+func TestList_FilterByUntil(t *testing.T) {
+	dir := t.TempDir()
+	projectDir := filepath.Join(dir, "projects", "-project-test")
+	require.NoError(t, os.MkdirAll(projectDir, 0755))
+
+	cutoff := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+
+	// Old session — before cutoff (should be included)
+	old := newEntry("user", "u1", cutoff.Add(-24*time.Hour))
+	writeJSONL(t, filepath.Join(projectDir, "old-sess-0000-0000-0000-00000000.jsonl"), []session.Entry{old})
+
+	// New session — after cutoff (should be excluded)
+	fresh := newEntry("user", "u2", cutoff.Add(time.Hour))
+	writeJSONL(t, filepath.Join(projectDir, "new-sess-0000-0000-0000-00000000.jsonl"), []session.Entry{fresh})
+
+	sessions, err := session.List(dir, &session.ListOptions{Until: cutoff})
+	require.NoError(t, err)
+	require.Len(t, sessions, 1)
+	assert.True(t, sessions[0].StartedAt.Before(cutoff))
+}
+
+func TestList_FilterBySinceAndUntil(t *testing.T) {
+	dir := t.TempDir()
+	projectDir := filepath.Join(dir, "projects", "-project-test")
+	require.NoError(t, os.MkdirAll(projectDir, 0755))
+
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+
+	// Before range (excluded by Since)
+	before := newEntry("user", "u1", start.Add(-24*time.Hour))
+	writeJSONL(t, filepath.Join(projectDir, "before-0000-0000-0000-00000000.jsonl"), []session.Entry{before})
+
+	// In range (included)
+	inRange := newEntry("user", "u2", start.Add(12*time.Hour))
+	writeJSONL(t, filepath.Join(projectDir, "inside-0000-0000-0000-00000000.jsonl"), []session.Entry{inRange})
+
+	// After range (excluded by Until)
+	after := newEntry("user", "u3", end.Add(time.Hour))
+	writeJSONL(t, filepath.Join(projectDir, "after-0000-0000-0000-000000000.jsonl"), []session.Entry{after})
+
+	sessions, err := session.List(dir, &session.ListOptions{Since: start, Until: end})
+	require.NoError(t, err)
+	require.Len(t, sessions, 1)
+	assert.True(t, sessions[0].StartedAt.Equal(start) || sessions[0].StartedAt.After(start))
+	assert.True(t, sessions[0].StartedAt.Before(end))
+}
+
 func TestList_Limit(t *testing.T) {
 	dir := t.TempDir()
 	projectDir := filepath.Join(dir, "projects", "-project-test")

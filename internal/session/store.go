@@ -26,6 +26,7 @@ func ClaudeHome() (string, error) {
 type ListOptions struct {
 	ProjectSlug string    // filter to a specific project slug (empty = all)
 	Since       time.Time // exclude sessions that started before this time (zero = no filter)
+	Until       time.Time // exclude sessions that started on or after this time (zero = no filter)
 	Limit       int       // maximum number of sessions to return (0 = all)
 }
 
@@ -62,6 +63,9 @@ func List(claudeHome string, opts *ListOptions) ([]Session, error) {
 				continue
 			}
 			if opts != nil && !opts.Since.IsZero() && s.StartedAt.Before(opts.Since) {
+				continue
+			}
+			if opts != nil && !opts.Until.IsZero() && !s.StartedAt.Before(opts.Until) {
 				continue
 			}
 			sessions = append(sessions, s)

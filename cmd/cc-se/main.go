@@ -43,6 +43,10 @@ func listCommand() *cli.Command {
 				Name:  "since",
 				Usage: "only show sessions started on or after this date (ISO 8601, e.g. 2026-01-01)",
 			},
+			&cli.StringFlag{
+				Name:  "until",
+				Usage: "only show sessions started before this date (ISO 8601, e.g. 2026-02-01)",
+			},
 			&cli.IntFlag{
 				Name:  "limit",
 				Usage: "maximum number of sessions to return",
@@ -71,6 +75,14 @@ func listCommand() *cli.Command {
 					return err
 				}
 				opts.Since = t
+			}
+
+			if untilStr := cmd.String("until"); untilStr != "" {
+				t, err := parseDateArg(untilStr)
+				if err != nil {
+					return err
+				}
+				opts.Until = t
 			}
 
 			sessions, err := session.List(claudeHome, opts)
